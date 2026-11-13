@@ -1,0 +1,6 @@
+Flask==3.0.3
+flask-cors==4.0.0
+Pillow==12.3.0
+gunicorn==23.0.0
+requests==2.32.3  # Для реальных HTTP-запросов к Google и платформам
+python-dotenv==1.0.0 # Для загрузки .env переменных

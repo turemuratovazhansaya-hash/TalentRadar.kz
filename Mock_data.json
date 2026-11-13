@@ -1,0 +1,71 @@
+{
+  "profile": {
+    "id": "#402",
+    "name": "Ученик #402",
+    "city": "г. Актобе",
+    "grade": "11 класс",
+    "track": "IT / Python",
+    "visibilityScore": 85
+  },
+  "activities": [
+    {
+      "id": "act-1",
+      "title": "Gambit Hackathon 2026",
+      "type": "Хакатон",
+      "date": "12–14 ноября",
+      "bonus": "+30% к видимости",
+      "bonusValue": 5,
+      "joined": false
+    },
+    {
+      "id": "act-2",
+      "title": "Республиканская STEM-Олимпиада",
+      "type": "Олимпиада",
+      "date": "Онлайн",
+      "bonus": "+25% к видимости",
+      "bonusValue": 5,
+      "joined": false
+    }
+  ],
+  "offers": [
+    {
+      "id": "offer-aitu-1",
+      "university": "Astana IT University",
+      "title": "Приглашение на грант 50% (Software Engineering)",
+      "message": "Ваш профиль из Актобе замечен приемной комиссией!",
+      "accepted": false
+    }
+  ],
+  "candidates": [
+    {
+      "id": "#402",
+      "name": "Ученик #402",
+      "city": "Актобе",
+      "grade": "11 класс",
+      "track": "IT / Python",
+      "score": 85,
+      "achievement": "1 место Regional Hackathon Aktobe, 15 репозиториев на GitHub.",
+      "offerSent": false
+    },
+    {
+      "id": "#305",
+      "name": "Ученик #305",
+      "city": "Актобе",
+      "grade": "11 класс",
+      "track": "Математика / Алгоритмы",
+      "score": 92,
+      "achievement": "Победитель Республиканской олимпиады по математике.",
+      "offerSent": false
+    },
+    {
+      "id": "#108",
+      "name": "Ученик #108",
+      "city": "Семей",
+      "grade": "10 класс",
+      "track": "Робототехника / STEM",
+      "score": 78,
+      "achievement": "Финалист World Robot Olympiad.",
+      "offerSent": false
+    }
+  ]
+}

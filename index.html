@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TalentRadar.kz — Видимость региональных талантов</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at 10% 20%, #fdf2f8 0%, #ecfeff 30%, #f0fdf4 60%, #fefce8 100%);
+            color: #1e293b;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #db2777 0%, #9333ea 50%, #2563eb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .card-enter {
+            animation: cardIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Toasts */
+        .toast-enter { animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(100%); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .toast-exit { animation: toastOut 0.3s ease-in forwards; }
+        @keyframes toastOut {
+            to { opacity: 0; transform: translateX(120%); }
+        }
+        /* Tabs */
+        .tab-active {
+            background: white;
+            color: #db2777;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 1px solid #fce7f3;
+        }
+        .tab-inactive {
+            color: #64748b;
+            background: transparent;
+        }
+        /* Dropzone hover */
+        .dropzone-active {
+            border-color: #db2777;
+            background: #fdf2f8;
+        }
+        /* Image hover effects */
+        .img-hover {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .img-hover:hover {
+            transform: scale(1.02);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-6 right-6 z-[9999] flex flex-col gap-3 max-w-sm w-full pointer-events-none"></div>
+
+    <!-- Header -->
+    <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                
+                <!-- Logo & Title -->
+                <div class="flex items-center justify-between w-full md:w-auto">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 via-purple-600 to-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-purple-200">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-lg tracking-tight text-zinc-900">TalentRadar<span class="text-pink-600">.kz</span></span>
+                                <span class="hidden sm:inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">Gambit 2026</span>
+                            </div>
+                            <p class="text-xs text-zinc-500 font-medium">Видимость талантов из регионов</p>
+                        </div>
+                    </div>
+                    <button id="btn-edit-profile-mobile" onclick="openEditModal()" class="hidden md:hidden text-xs font-bold bg-purple-50 text-purple-700 px-3 py-1.5 rounded-lg border border-purple-200">
+                        Профиль
+                    </button>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                    <div id="header-guest" class="text-xs font-medium text-zinc-500">Сначала вход — кабинет откроется по роли</div>
+                    <div id="header-user" class="hidden flex items-center gap-2">
+                        <span id="header-role" class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">Роль</span>
+                        <span id="header-user-name" class="text-sm font-bold text-zinc-800"></span>
+                        <button id="btn-edit-profile" onclick="openEditModal()" class="hidden px-4 py-2 rounded-lg bg-white border border-zinc-300 text-zinc-700 text-sm font-semibold hover:bg-zinc-50 transition shadow-sm">
+                            <i class="fas fa-user-edit mr-2"></i>Профиль
+                        </button>
+                        <button onclick="logout()" class="px-3 py-1.5 rounded-full text-xs font-bold bg-white text-zinc-700 border border-zinc-200 hover:bg-zinc-50 transition">
+                            <i class="fas fa-sign-out-alt mr-1"></i>Выйти
+                        </button>
+                    </div>
+                    <div id="api-badge" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-zinc-100 text-zinc-600 border border-zinc-200">
+                        <span id="api-dot" class="w-1.5 h-1.5 rounded-full bg-zinc-400"></span>
+                        <span id="api-status-text">Подключение...</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
+
+        <!-- ===================================================================== -->
+        <!-- ЭКРАН 0: ВХОД И РЕГИСТРАЦИЯ                                           -->
+        <!-- ===================================================================== -->
+        <section id="screen-auth" class="max-w-lg mx-auto card-enter">
+            <div class="glass-card rounded-3xl p-6 md:p-8">
+                <div class="text-center mb-6">
+                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500 to-indigo-600 text-white flex items-center justify-center font-bold text-xl mx-auto mb-3 shadow-lg shadow-purple-200">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <h1 class="text-2xl font-extrabold text-zinc-900">Вход в TalentRadar</h1>
+                    <p class="text-sm text-zinc-500 mt-1">Школьник и вуз входят отдельно. После входа открывается только свой кабинет.</p>
+                </div>
+
+                <div class="flex p-1 mb-5 bg-zinc-100 rounded-xl">
+                    <button type="button" id="auth-tab-login" onclick="switchAuthTab('login')" class="tab-active flex-1 py-2 rounded-lg text-sm font-bold">Вход</button>
+                    <button type="button" id="auth-tab-signup" onclick="switchAuthTab('signup')" class="tab-inactive flex-1 py-2 rounded-lg text-sm font-bold">Регистрация</button>
+                </div>
+
+                <form id="login-form" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">Почта</label>
+                        <input type="email" id="login-email" required placeholder="student@talentradar.kz" class="w-full px-3 py-2 rounded-lg border border-zinc-300 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">Пароль</label>
+                        <input type="password" id="login-password" required class="w-full px-3 py-2 rounded-lg border border-zinc-300 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                    </div>
+                    <button type="submit" class="w-full py-2.5 rounded-xl bg-zinc-950 text-white text-sm font-bold">Войти</button>
+                </form>
+
+                <form id="signup-form" class="hidden space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">Кто вы</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-300 text-sm font-semibold cursor-pointer">
+                                <input type="radio" name="signup-role" value="student" checked> Школьник
+                            </label>
+                            <label class="flex items-center gap-2 px-3 py-2 rounded-lg border border-zinc-300 text-sm font-semibold cursor-pointer">
+                                <input type="radio" name="signup-role" value="university"> Вуз
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <label id="signup-name-label" class="block text-xs font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">Имя</label>
+                        <input type="text" id="signup-name" required placeholder="Алихан С." class="w-full px-3 py-2 rounded-lg border border-zinc-300 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">Почта</label>
+                        <input type="email" id="signup-email" required class="w-full px-3 py-2 rounded-lg border border-zinc-300 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">Пароль</label>
+                        <input type="password" id="signup-password" required minlength="4" class="w-full px-3 py-2 rounded-lg border border-zinc-300 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">Город</label>
+                        <select id="signup-city" class="w-full px-3 py-2 rounded-lg border border-zinc-300 text-sm bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                            <option value="Актобе">Актобе</option>
+                            <option value="Семей">Семей</option>
+                            <option value="Шымкент">Шымкент</option>
+                            <option value="Алматы">Алматы</option>
+                            <option value="Астана">Астана</option>
+                        </select>
+                    </div>
+                    <div id="signup-student-fields" class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">Класс</label>
+                            <input type="number" id="signup-grade" value="11" min="8" max="11" class="w-full px-3 py-2 rounded-lg border border-zinc-300 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-xs font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">Направление</label>
+                            <select id="signup-track" class="w-full px-3 py-2 rounded-lg border border-zinc-300 text-sm bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                                <option value="IT / Python">IT / Программирование</option>
+                                <option value="Математика / Алгоритмы">Математика</option>
+                                <option value="Естественные науки (Био/Хим/Физ)">Естественные науки</option>
+                                <option value="Гуманитарные науки (История/Языки)">Гуманитарный</option>
+                                <option value="Дизайн / Арт / Творчество">Дизайн / Арт</option>
+                                <option value="Бизнес / Экономика">Бизнес / Экономика</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm font-bold">Создать аккаунт</button>
+                </form>
+
+                <div class="mt-6 rounded-2xl bg-zinc-50 border border-zinc-200 p-4 text-xs text-zinc-600 space-y-1">
+                    <p class="font-bold text-zinc-800">Демо-аккаунты уже лежат в базе</p>
+                    <p>Школьник: <span class="font-semibold">student@talentradar.kz</span> / student123</p>
+                    <p>Вуз: <span class="font-semibold">vuz@talentradar.kz</span> / vuz123</p>
+                </div>
+            </div>
+        </section>
+        
+        <!-- ===================================================================== -->
+        <!-- ЭКРАН 1: КАБИНЕТ ШКОЛЬНИКА                                            -->
+        <!-- ===================================================================== -->
+        <section id="screen-student" class="hidden space-y-8 card-enter">
+            
+            <!-- Tabs Navigation -->
+            <div class="flex flex-wrap items-center gap-2 p-1 bg-zinc-100/50 rounded-xl w-fit border border-zinc-200/60">
+                <button onclick="switchStudentTab('overview')" id="tab-overview" class="tab-active px-4 py-2 rounded-lg text-xs font-bold transition">📊 Обзор и индекс</button>
+                <button onclick="switchStudentTab('verification')" id="tab-verification" class="tab-inactive px-4 py-2 rounded-lg text-xs font-bold transition">📜 Верификация грамот</button>
+                <button onclick="switchStudentTab('activities')" id="tab-activities" class="tab-inactive px-4 py-2 rounded-lg text-xs font-bold transition">🗺 Рекомендации под регион</button>
+                <button onclick="switchStudentTab('offers')" id="tab-offers" class="tab-inactive px-4 py-2 rounded-lg text-xs font-bold transition">🏛 Офферы от вузов</button>
+                <button onclick="switchStudentTab('ai')" id="tab-ai" class="tab-inactive px-4 py-2 rounded-lg text-xs font-bold transition">🤖 ИИ-Консультант</button>
+            </div>
+
+            <!-- Tab Content: Overview -->
+            <div id="content-overview" class="space-y-6">
+                <!-- Profile Header Card -->
+                <div class="glass-card rounded-3xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+                    <!-- Decorative colorful blob -->
+                    <div class="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-pink-200 to-purple-200 rounded-full blur-3xl opacity-50 -translate-y-1/2 translate-x-1/2"></div>
+                    
+                    <div class="flex items-center gap-5 relative z-10">
+                        <div id="profile-avatar" class="w-20 h-20 rounded-2xl bg-gradient-to-br from-pink-500 to-indigo-600 text-white flex items-center justify-center font-extrabold text-3xl shadow-xl shadow-purple-200 img-hover">
+                            ?
+                        </div>
+                        <div>
+                            <h1 id="profile-name" class="text-2xl font-extrabold text-zinc-900">Профиль</h1>
+                            <p class="text-sm text-zinc-500 font-medium">Верифицированный профиль абитуриента</p>
+                            <div class="flex flex-wrap items-center gap-2 mt-3">
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-sky-50 text-sky-700 border border-sky-200">
+                                    <i class="fas fa-map-marker-alt"></i> <span id="student-city">—</span>
+                                </span>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                                    <i class="fas fa-graduation-cap"></i> <span id="student-grade">—</span>
+                                </span>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <i class="fas fa-code"></i> <span id="student-track">—</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Visual Gauge & Score -->
+                    <div class="text-right relative z-10 flex flex-col items-end gap-3">
+                        <p class="text-xs font-bold uppercase tracking-wider text-purple-500">Индекс видимости</p>
+                        <div class="flex items-center gap-4">
+                            <!-- Circular Gauge -->
+                            <div class="relative w-28 h-28">
+                                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" stroke-width="12"></circle>
+                                    <circle id="gauge-fill" cx="50" cy="50" r="40" fill="none" stroke="url(#gauge-gradient)" stroke-width="12" stroke-linecap="round" style="stroke-dasharray: 251.2; stroke-dashoffset: 251.2; transition: stroke-dashoffset 1s cubic-bezier(0.16, 1, 0.3, 1);"></circle>
+                                    <defs>
+                                        <linearGradient id="gauge-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" style="stop-color:#ef4444;"></stop>
+                                            <stop offset="50%" style="stop-color:#f59e0b;"></stop>
+                                            <stop offset="100%" style="stop-color:#10b981;"></stop>
+                                        </linearGradient>
+                                    </defs>
+                                </svg>
+                                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                    <span id="visibility-score-text" class="text-2xl font-extrabold text-gray-800">0%</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Large Score Text & Caption -->
+                            <div class="flex flex-col gap-2">
+                                <span id="visibility-score-large" class="text-4xl font-extrabold gradient-text leading-none">88%</span>
+                                <span id="visibility-caption" class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md self-start">+15% за месяц</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats Grid with SVG Illustrations -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Visibility Score Card -->
+                    <div class="glass-card rounded-3xl p-6 md:col-span-2 relative overflow-hidden">
+                        <!-- SVG Illustration of a rising chart -->
+                        <div class="absolute right-0 bottom-0 opacity-10 w-48 h-48 text-purple-500">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13l4-4 3 3 5-6 4 4"></path></svg>
+                        </div>
+                        <div class="relative z-10">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-bold text-zinc-900 text-lg">Динамика индекса видимости</h3>
+                                <span class="text-xs font-medium text-zinc-500 bg-zinc-100 px-2 py-1 rounded-md">Цель: 95%</span>
+                            </div>
+                            <div class="w-full bg-zinc-200/70 rounded-full h-4 mb-6 overflow-hidden">
+                                <div id="visibility-bar" class="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 h-4 rounded-full transition-all duration-1000 ease-out" style="width: 88%"></div>
+                            </div>
+                            <p class="text-sm text-zinc-600 leading-relaxed max-w-lg">
+                                Твой профиль активно отображается в поисковых запросах вузов <strong class="text-zinc-900">твоего региона</strong> и столичных центрах (Астана, Алматы). Верифицированные достижения добавляют доверие и автоматически повышают шансы на грантовое поступление.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats Card -->
+                    <div class="glass-card rounded-3xl p-6 flex flex-col justify-between relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-emerald-100 rounded-full blur-2xl opacity-40 -translate-y-1/2 translate-x-1/2"></div>
+                        <p class="text-xs font-bold uppercase tracking-wider text-zinc-400 relative z-10">Статус профиля</p>
+                        <div class="mt-2 flex items-center gap-2 relative z-10">
+                            <div class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></div>
+                            <span class="text-sm font-bold text-emerald-700">Активен в радаре</span>
+                        </div>
+                        <div class="mt-4 relative z-10">
+                            <div class="text-xs text-zinc-500 mb-1">Профиль заполнен на</div>
+                            <div class="w-full bg-zinc-200 rounded-full h-2">
+                                <div class="bg-emerald-500 h-2 rounded-full" style="width: 85%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content: Verification (Верификация грамот) -->
+            <div id="content-verification" class="hidden space-y-6 card-enter">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-zinc-900">Верификация достижений</h2>
+                        <p class="text-sm text-zinc-500">Загружайте фото/сканы грамот, дипломов и сертификатов. Введите детали достижения.</p>
+                    </div>
+                    <button onclick="openCertModal()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 text-white text-sm font-bold shadow-lg shadow-purple-100 transition flex items-center gap-2">
+                        <i class="fas fa-plus-circle"></i> Добавить грамоту
+                    </button>
+                </div>
+
+                <!-- Certificates Grid -->
+                <div id="certificates-container" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Рендер JS -->
+                </div>
+
+                <!-- Info block about verification -->
+                <div class="glass-card rounded-2xl p-5 border-l-4 border-l-purple-400 bg-purple-50/30 flex items-start gap-4">
+                    <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-xl shrink-0">
+                        <i class="fas fa-shield-alt text-purple-600"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-bold text-purple-900">Прозрачность и доверие вузам</h4>
+                        <p class="text-xs text-purple-700/80 mt-1 leading-relaxed">
+                            Каждая загруженная грамота проходит автоматическую проверку на соответствие формату и читаемости. 
+                            Подтверждённые достижения добавляют баллы к индексу видимости и делают профиль «проверенным» в глазах приёмных комиссий твоего региона и всего Казахстана.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content: Activities -->
+            <div id="content-activities" class="hidden space-y-6 card-enter">
+                <div class="mb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-zinc-950">Рекомендованные мероприятие под твой регион</h2>
+                        <p class="text-sm text-zinc-500">Локальные олимпиады, хакатоны и квесты, где ценим regional talent. Результаты подтягиваются реальным поиском в Google, Devpost и Stepik.</p>
+                    </div>
+                    <!-- Search Bar for Real Activities Search -->
+                    <div class="w-full md:w-72">
+                        <input type="text" id="activities-search-input" placeholder="🔍 Поиск по названию..." class="w-full px-3 py-2 rounded-lg border border-zinc-300 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                    </div>
+                </div>
+                <div id="activities-container" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Рендер JS -->
+                </div>
+            </div>
+
+            <!-- Tab Content: Offers -->
+            <div id="content-offers" class="hidden space-y-6 card-enter">
+                <div class="mb-4">
+                    <h2 class="text-lg font-bold text-zinc-950">Входящие офферы от ВУЗов</h2>
+                    <p class="text-sm text-zinc-500">Прямые приглашения на гранты, скидки и целевое поступление из твоего региона.</p>
+                </div>
+                <div id="offers-container" class="space-y-4">
+                    <!-- Рендер JS -->
+                </div>
+            </div>
+
+            <!-- Tab Content: AI Consultant -->
+            <div id="content-ai" class="hidden space-y-6 card-enter">
+                <div class="glass-card rounded-3xl p-6 flex flex-col h-[650px] border border-purple-200 shadow-xl shadow-purple-50">
+                    <!-- Chat Header -->
+                    <div class="flex items-center gap-3 border-b border-purple-100 pb-4 mb-4">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xl shadow-lg shadow-purple-200">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-zinc-900">TalentRadar AI Consultant</h3>
+                            <p class="text-xs text-emerald-600 font-bold flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                Онлайн • Готов помочь поступить
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Chat Messages Window -->
+                    <div id="chat-messages" class="flex-1 overflow-y-auto pr-2 space-y-4 mb-4 scroll-smooth">
+                        <!-- Default Welcome Message -->
+                        <div class="flex justify-start">
+                            <div class="max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm bg-white border border-zinc-200 text-zinc-700 rounded-bl-none">
+                                Привет! Я ИИ-консультант TalentRadar. Я проанализировал твой профиль. Спроси меня, какие конкурсы и олимпиады тебе стоит пройти, чтобы попасть на грант!
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chat Input -->
+                    <div class="border-t border-purple-100 pt-4">
+                        <form id="chat-form" class="flex gap-2">
+                            <input type="text" id="chat-input" placeholder="Спросите ИИ: 'Какие олимпиады мне стоит пройти в Актобе?'" 
+                                   class="flex-1 px-4 py-2.5 rounded-xl bg-zinc-50 border border-zinc-200 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                            <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-sm font-bold shadow-lg shadow-purple-100 hover:opacity-90 transition">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- ЭКРАН 2: B2B ПАНЕЛЬ ВУЗА / КОМПАНИИ                                -->
+        <!-- ===================================================================== -->
+        <section id="screen-b2b" class="hidden space-y-8 card-enter">
+            
+            <div class="glass-card rounded-3xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-100">
+                <div>
+                    <h2 class="text-xl font-extrabold text-zinc-900">Панель поиска региональных талантов (B2B Радар)</h2>
+                    <p class="text-sm text-zinc-600 font-medium">Интеграция с regional school networks. Поиск и приглашение абитуриентов из разных регионов Казахстана.</p>
+                </div>
+                <div class="flex items-center gap-2 bg-white/60 text-purple-700 px-4 py-2 rounded-full text-xs font-bold border border-purple-200 shadow-sm">
+                    <span class="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></span>
+                    Поиск по квотам регионов
+                </div>
+            </div>
+
+            <!-- Filters Bar -->
+            <div class="glass-card rounded-3xl p-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">Регион / Город</label>
+                        <select id="filter-city" onchange="applyRadarFilters()" class="w-full px-3 py-2 rounded-lg border border-zinc-300 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none bg-white">
+                            <option value="Все" selected>Все регионы</option>
+                            <option value="Актобе">Актобе (Областной центр)</option>
+                            <option value="Семей">Семей</option>
+                            <option value="Шымкент">Шымкент</option>
+                            <option value="Алматы">Алматы</option>
+                            <option value="Астана">Астана</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">Направление (Track)</label>
+                        <select id="filter-track" onchange="applyRadarFilters()" class="w-full px-3 py-2 rounded-lg border border-zinc-300 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none bg-white">
+                            <option value="Все">Все направления</option>
+                            <option value="IT / Python">IT / Программирование</option>
+                            <option value="Математика / Алгоритмы">Математика</option>
+                            <option value="Естественные науки (Био/Хим/Физ)">Естественные науки</option>
+                            <option value="Гуманитарные науки (История/Языки)">Гуманитарный</option>
+                            <option value="Дизайн / Арт / Творчество">Дизайн / Арт</option>
+                            <option value="Бизнес / Экономика">Бизнес / Экономика</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">Мин. индекс видимости</label>
+                        <input id="filter-score" type="number" min="0" max="100" value="0" onchange="applyRadarFilters()" class="w-full px-3 py-2 rounded-lg border border-zinc-300 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="resetFilters()" class="w-full px-3 py-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-sm font-bold transition">
+                            <i class="fas fa-sync-alt mr-1"></i>Сбросить
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Candidates Grid -->
+            <div>
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-zinc-950">Каталог абитуриентов (Анонимный Радар)</h2>
+                        <p class="text-sm text-zinc-500">Список верифицированных школьников из регионов, доступных для приглашения</p>
+                    </div>
+                    <span class="px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-700" id="candidates-count">Найдено: 3 кандидата</span>
+                </div>
+
+                <div id="candidates-container" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Рендер JS -->
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-zinc-200 bg-white/50 py-6 backdrop-blur-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p class="text-xs text-zinc-500 font-medium">
+                © 2026 TalentRadar.kz — Проект создан в рамках хакатона Gambit Hackathon 2026.
+            </p>
+            <div class="flex gap-4 text-xs text-zinc-500">
+                <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Данные защищены законом РК о персональных данных</span>
+            </div>
+        </div>
+    </footer>
+
+
+    <!-- Модальное окно редактирования профиля / Регистрации -->
+    <div id="register-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div class="glass-card rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-white/60 max-h-[90vh] overflow-y-auto">
+            <div class="text-center mb-6">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500 to-indigo-600 text-white flex items-center justify-center font-bold text-xl mx-auto mb-3 shadow-lg shadow-purple-200">
+                    <i class="fas fa-user-edit"></i>
+                </div>
+                <h2 id="reg-title" class="text-xl font-extrabold text-zinc-900">Профиль школьника</h2>
+                <p class="text-sm text-zinc-500 mt-1">Эти данные видит радар вузов: город, класс и направление.</p>
+            </div>
+
+            <form id="register-form" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2">
+                        <label class="block text-xs font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">Имя / Фамилия / Никнейм</label>
+                        <input type="text" id="reg-name" required placeholder="Например, Алихан С." 
+                               class="w-full px-3 py-2 rounded-lg border border-zinc-300 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">Регион / Город</label>
+                        <select id="reg-city" class="w-full px-3 py-2 rounded-lg border border-zinc-300 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none bg-white">
+                            <option value="Актобе">Актобе</option>
+                            <option value="Семей">Семей</option>
+                            <option value="Шымкент">Шымкент</option>
+                            <option value="Алматы">Алматы</option>
+                            <option value="Астана">Астана</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">Класс</label>
+                        <input type="number" id="reg-grade" value="10" min="8" max="11"
+                               class="w-full px-3 py-2 rounded-lg border border-zinc-300 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">Направление интересов (Track)</label>
+                    <select id="reg-track" class="w-full px-3 py-2 rounded-lg border border-zinc-300 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none bg-white">
+                        <option value="IT / Python">IT / Программирование (Python, Java, Web)</option>
+                        <option value="Математика / Алгоритмы">Математика / Алгоритмы</option>
+                        <option value="Естественные науки (Био/Хим/Физ)">Естественные науки (Биология, Химия, Физика)</option>
+                                               <option value="Гуманитарные науки (История/Языки)">Гуманитарный (История, Казахский/Русский/Английский языки)</option>
+                        <option value="Дизайн / Арт / Творчество">Дизайн / Арт / Творчество (Графика, Дизайн, Музыка)</option>
+                        <option value="Бизнес / Экономика">Бизнес / Экономика (Маркетинг, Финансы, Pre-incubator)</option>
+                    </select>
+                </div>
+
+                <div class="pt-4 flex gap-3 border-t border-zinc-100 mt-2">
+                    <button type="button" onclick="closeEditModal()"
+                        class="flex-1 px-4 py-2.5 rounded-lg border border-zinc-300 text-zinc-700 text-sm font-bold hover:bg-zinc-50 transition">
+                        Закрыть
+                    </button>
+                    <button type="submit"
+                        class="flex-1 px-4 py-2.5 rounded-lg bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 text-white text-sm font-bold shadow-lg shadow-purple-100 transition">
+                        <i class="fas fa-save mr-2"></i>Сохранить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- Модальное окно добавления/верификации грамоты -->
+    <div id="cert-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div class="glass-card rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-white/60 max-h-[90vh] overflow-y-auto">
+            <div class="text-center mb-6">
+                <div class="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl mx-auto mb-3 border border-emerald-200">
+                    <i class="fas fa-trophy"></i>
+                </div>
+                <h2 class="text-xl font-extrabold text-zinc-900">Добавить достижение / грамоту</h2>
+                <p class="text-sm text-zinc-500 mt-1">Загрузите фото скана и укажите детали для верификации системой.</p>
+            </div>
+
+            <form id="cert-form" class="space-y-4">
+                <!-- Dropzone for Photo Upload -->
+                <div id="dropzone" onclick="openFilePicker(event)" class="border-2 border-dashed border-zinc-300 rounded-xl p-6 text-center cursor-pointer transition hover:bg-zinc-50">
+                    <input type="file" id="cert-photo" accept="image/*" class="hidden" onchange="handleImagePreview()">
+                    <div id="dropzone-content">
+                        <i class="fas fa-cloud-upload-alt text-4xl text-zinc-400 mb-2"></i>
+                        <p class="text-xs text-zinc-500 font-medium">Нажмите, чтобы выбрать фото/скан грамоты</p>
+                        <p class="text-[10px] text-zinc-400 mt-1">JPG, PNG до 5 МБ</p>
+                    </div>
+                    <img id="image-preview" class="hidden mt-3 max-h-40 mx-auto rounded-lg shadow-sm border border-zinc-200" alt="Preview">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">Название достижения / Позиция</label>
+                    <input type="text" id="cert-title" required placeholder="Например: 1 место в областной олимпиаде по физике" 
+                           class="w-full px-3 py-2 rounded-lg border border-zinc-300 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">Организатор / Место</label>
+                        <input type="text" id="cert-org" required placeholder="Например: Актобе IT-школа / 1 место" 
+                               class="w-full px-3 py-2 rounded-lg border border-zinc-300 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-zinc-500 mb-1.5 uppercase tracking-wider">Дата выдачи</label>
+                        <input type="date" id="cert-date" class="w-full px-3 py-2 rounded-lg border border-zinc-300 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="pt-4 flex gap-3 border-t border-zinc-100 mt-2">
+                    <button type="button" onclick="closeCertModal()"
+                        class="flex-1 px-4 py-2.5 rounded-lg border border-zinc-300 text-zinc-700 text-sm font-bold hover:bg-zinc-50 transition">
+                        Отмена
+                    </button>
+                    <button type="submit"
+                        class="flex-1 px-4 py-2.5 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90 text-white text-sm font-bold shadow-lg shadow-emerald-100 transition">
+                        <i class="fas fa-paper-plane mr-2"></i>Отправить на проверку
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <script>
+        const API_BASE = ''; 
+        const state = {
+            role: null,
+            token: localStorage.getItem('talentradar_token') || null,
+            apiOnline: false,
+            currentStudentTab: 'overview',
+            profile: { id: null, name: '', city: '', grade: '', track: '', visibilityScore: 0 },
+            university: { name: '', city: '' },
+            certificates: [],
+            activities: [],
+            offers: [],
+            candidates: []
+        };
+
+        const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+        const mediaUrl = path => !path || path.startsWith('http') || path.startsWith('data:') ? path : API_BASE + path;
+
+        async function api(path, opts = {}) {
+            try {
+                const response = await fetch(API_BASE + path, {
+                    ...opts,
+                    headers: { ...(state.token ? { Authorization: 'Bearer ' + state.token } : {}), ...(opts.headers || {}) }
+                });
+                const data = await response.json().catch(() => null);
+                if (!response.ok) {
+                    const error = new Error((data && data.error) || ('Ошибка ' + response.status));
+                    error.http = response.status;
+                    throw error;
+                }
+                return data;
+            } catch (e) {
+                console.error("API request failed:", e);
+                throw e;
+            }
+        }
+        const jsonOpts = (method, body) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+        const CERT_LABEL = { pending: 'На проверке', verified: 'Подтверждено', rejected: 'Не подтверждено' };
+        const normProfile = profile => ({
+            id: profile.id,
+            name: profile.name,
+            city: profile.city,
+            grade: profile.grade,
+            track: profile.track,
+            email: profile.email || '',
+            visibilityScore: profile.visibility_score ?? 0
+        });
+        const normCert = cert => ({
+            id: cert.id,
+            title: cert.title,
+            org: cert.org,
+            date: cert.date,
+            status: cert.status,
+            reason: cert.reason || '',
+            checks: cert.checks || [],
+            scoreBoost: cert.score_boost || 0,
+            image: cert.image ? mediaUrl(cert.image) : null
+        });
+        const normAct = activity => ({ id: activity.id, title: activity.title, type: activity.type, date: activity.date, bonus: activity.bonus, region: activity.region, joined: !!activity.joined });
+        const normOffer = offer => ({ id: offer.id, university: offer.university, title: offer.title, message: offer.message, region: offer.region, accepted: offer.status === 'accepted' });
+        const normCand = candidate => ({ id: candidate.id, name: candidate.name, city: candidate.city, grade: candidate.grade, track: candidate.track, score: candidate.score, achievement: candidate.achievement, offerSent: !!candidate.offer_sent });
+
+        function logout(reload = true) {
+            localStorage.removeItem('talentradar_token');
+            state.token = null;
+            state.role = null;
+            if (reload) location.reload();
+        }
+
+        function setApiStatus(online) {
+            state.apiOnline = online;
+            const dot = document.getElementById('api-dot');
+            const text = document.getElementById('api-status-text');
+            const badge = document.getElementById('api-badge');
+            if (!dot) return;
+            dot.className = 'w-1.5 h-1.5 rounded-full ' + (online ? 'bg-emerald-500' : 'bg-amber-500');
+            text.textContent = online ? 'База подключена' : 'Нет связи с сервером';
+            badge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border ' +
+                (online ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200');
+        }
+
+        function showScreen(name) {
+            document.getElementById('screen-auth').classList.toggle('hidden', name !== 'auth');
+            document.getElementById('screen-student').classList.toggle('hidden', name !== 'student');
+            document.getElementById('screen-b2b').classList.toggle('hidden', name !== 'university');
+            document.getElementById('header-guest').classList.toggle('hidden', name !== 'auth');
+            document.getElementById('header-user').classList.toggle('hidden', name === 'auth');
+            const studentOnly = name === 'student';
+            document.getElementById('btn-edit-profile').classList.toggle('hidden', !studentOnly);
+            document.getElementById('btn-edit-profile-mobile').classList.toggle('hidden', !studentOnly);
+        }
+
+        function paintHeader() {
+            const role = state.role === 'university' ? 'Вуз' : 'Школьник';
+            document.getElementById('header-role').textContent = role;
+            document.getElementById('header-user-name').textContent = state.role === 'university' ? state.university.name : state.profile.name;
+        }
+
+        async function enterSession(session) {
+            state.token = session.token;
+            state.role = session.role;
+            localStorage.setItem('talentradar_token', state.token);
+            if (session.role === 'student') {
+                state.profile = normProfile(session.profile);
+                showScreen('student');
+                paintHeader();
+                await Promise.all([fetchCertificates(), fetchOffers()]);
+                renderAll();
+            } else {
+                state.university = session.profile || { name: 'Вуз', city: '' };
+                showScreen('university');
+                paintHeader();
+                const title = document.querySelector('#screen-b2b h2');
+                if (title) title.textContent = state.university.name + ' — радар абитуриентов';
+                await loadCandidates();
+                applyRadarFilters();
+            }
+        }
+
+        async function fetchCertificates() { state.certificates = (await api('/api/certificates')).map(normCert); }
+        async function fetchOffers() { state.offers = (await api('/api/offers')).map(normOffer); }
+        async function loadCandidates() {
+            state.candidates = (await api('/api/radar?city=Все&min_score=0')).map(normCand);
+        }
+
+        // --- ПОИСК МЕРОПРИЯТИЙ ---
+        let activitiesRequest = 0;
+        async function fetchActivities(searchQuery = '') {
+            const requestId = ++activitiesRequest;
+            state.activitiesLoading = true;
+            renderActivities();
+            try {
+                const city = state.profile.city || 'Актобе';
+                const track = state.profile.track || 'IT / Python';
+                const url = `/api/activities/search_real?city=${encodeURIComponent(city)}&track=${encodeURIComponent(track)}&q=${encodeURIComponent(searchQuery)}`;
+                const data = await api(url);
+                if (requestId !== activitiesRequest) return;
+                state.activities = data.map(act => ({
+                    id: act.id ?? null,
+                    title: act.title,
+                    type: act.type || 'Ивент',
+                    date: act.date || 'Скоро',
+                    bonus: act.bonus || '+10%',
+                    region: act.city || city,
+                    snippet: act.snippet || '',
+                    link: act.link || null,
+                    source: act.source || '',
+                    joined: !!act.joined
+                }));
+            } catch (error) {
+                if (requestId !== activitiesRequest) return;
+                state.activities = [];
+                showToast('Не удалось загрузить мероприятия: ' + error.message, 'error');
+            } finally {
+                if (requestId === activitiesRequest) {
+                    state.activitiesLoading = false;
+                    renderActivities();
+                }
+            }
+        }
+
+        // --- AI CONSULTANT LOGIC ---
+        async function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const msg = input.value.trim();
+            if (!msg) return;
+
+            addChatMessage(msg, 'user');
+            input.value = '';
+
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'flex justify-start';
+            typingDiv.innerHTML = `<div class="bg-white border border-zinc-200 px-4 py-2.5 rounded-2xl rounded-bl-none shadow-sm text-zinc-500 text-xs animate-pulse">ИИ анализирует твой профиль...</div>`;
+            document.getElementById('chat-messages').appendChild(typingDiv);
+            document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+
+            try {
+                const data = await api('/api/ai/consult', jsonOpts('POST', { message: msg }));
+                typingDiv.remove();
+                addChatMessage(data.response || 'ИИ не ответил.', 'assistant');
+            } catch (error) {
+                typingDiv.remove();
+                addChatMessage('Извините, не удалось связаться с ИИ. Убедитесь, что сервер main.py запущен.', 'assistant');
+            }
+        }
+
+        function addChatMessage(text, sender) {
+            const container = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = `flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+            div.innerHTML = `
+                <div class="max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm ${
+                    sender === 'user' 
+                        ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-br-none' 
+                        : 'bg-white border border-zinc-200 text-zinc-700 rounded-bl-none'
+                }">
+                    ${esc(text)}
+                </div>
+            `;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            setApiStatus(false);
+            try {
+                const health = await api('/api/health');
+                if (health && health.status === 'ok') {
+                    setApiStatus(true);
+                }
+            } catch (e) {
+                setApiStatus(false);
+            }
+
+            if (state.token) {
+                try {
+                    const session = await api('/api/auth/me');
+                    await enterSession(session);
+                    return;
+                } catch (e) {
+                    localStorage.removeItem('talentradar_token');
+                    state.token = null;
+                }
+            }
+            showScreen('auth');
+        });
+
+        function switchAuthTab(tab) {
+            const login = document.getElementById('login-form');
+            const signup = document.getElementById('signup-form');
+            const loginBtn = document.getElementById('auth-tab-login');
+            const signupBtn = document.getElementById('auth-tab-signup');
+            const showLogin = tab === 'login';
+            login.classList.toggle('hidden', !showLogin);
+            signup.classList.toggle('hidden', showLogin);
+            loginBtn.className = (showLogin ? 'tab-active' : 'tab-inactive') + ' flex-1 py-2 rounded-lg text-sm font-bold';
+            signupBtn.className = (!showLogin ? 'tab-active' : 'tab-inactive') + ' flex-1 py-2 rounded-lg text-sm font-bold';
+        }
+
+        document.querySelectorAll('input[name="signup-role"]').forEach(input => {
+            input.addEventListener('change', () => {
+                const role = document.querySelector('input[name="signup-role"]:checked').value;
+                document.getElementById('signup-student-fields').classList.toggle('hidden', role !== 'student');
+                document.getElementById('signup-name-label').textContent = role === 'student' ? 'Имя' : 'Название вуза';
+                document.getElementById('signup-name').placeholder = role === 'student' ? 'Алихан С.' : 'Astana IT University';
+            });
+        });
+
+        document.getElementById('login-form').addEventListener('submit', async event => {
+            event.preventDefault();
+            try {
+                const session = await api('/api/auth/login', jsonOpts('POST', {
+                    email: document.getElementById('login-email').value.trim(),
+                    password: document.getElementById('login-password').value
+                }));
+                await enterSession(session);
+                showToast('Вход успешно выполнен', 'success');
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        });
+
+        document.getElementById('signup-form').addEventListener('submit', async event => {
+            event.preventDefault();
+            const role = document.querySelector('input[name="signup-role"]:checked').value;
+            try {
+                const session = await api('/api/auth/register', jsonOpts('POST', {
+                    role,
+                    name: document.getElementById('signup-name').value.trim(),
+                    email: document.getElementById('signup-email').value.trim(),
+                    password: document.getElementById('signup-password').value,
+                    city: document.getElementById('signup-city').value,
+                    grade: document.getElementById('signup-grade').value,
+                    track: document.getElementById('signup-track').value
+                }));
+                await enterSession(session);
+                showToast('Аккаунт успешно создан!', 'success');
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        });
+
+        function switchStudentTab(tab, load = true) {
+            state.currentStudentTab = tab;
+            ['overview', 'verification', 'activities', 'offers', 'ai'].forEach(name => {
+                const button = document.getElementById('tab-' + name);
+                const content = document.getElementById('content-' + name);
+                const active = name === tab;
+                if (button) {
+                    button.classList.toggle('tab-active', active);
+                    button.classList.toggle('tab-inactive', !active);
+                }
+                if (content) {
+                    content.classList.toggle('hidden', !active);
+                }
+            });
+            
+            if (tab === 'activities' && load) {
+                fetchActivities(document.getElementById('activities-search-input').value.trim());
+            }
+            if (tab === 'ai') {
+                setTimeout(() => document.getElementById('chat-input')?.focus(), 100);
+            }
+        }
+
+        function renderAll() {
+            const profile = state.profile;
+            document.getElementById('student-city').textContent = 'г. ' + String(profile.city || '—').replace(/^г\.\s*/, '');
+            document.getElementById('student-grade').textContent = profile.grade || '—';
+            document.getElementById('student-track').textContent = profile.track || '—';
+            document.getElementById('profile-name').textContent = profile.name || 'Профиль';
+            document.getElementById('profile-avatar').textContent = (String(profile.name || '?').match(/#\d+/) || [String(profile.name || '?').charAt(0).toUpperCase()])[0];
+            
+            const score = Math.max(0, Math.min(100, Number(profile.visibilityScore) || 0));
+            
+            // Update circular gauge
+            const circumference = 2 * Math.PI * 40; // r=40 => ~251.2
+            const offset = circumference - (score / 100) * circumference;
+            const gaugeFill = document.getElementById('gauge-fill');
+            if (gaugeFill) {
+                gaugeFill.style.strokeDashoffset = offset;
+            }
+            const scoreText = document.getElementById('visibility-score-text');
+            if (scoreText) {
+                scoreText.textContent = score + '%';
+            }
+            const scoreLarge = document.getElementById('visibility-score-large');
+            if (scoreLarge) {
+                scoreLarge.textContent = score + '%';
+            }
+            
+            document.getElementById('visibility-bar').style.width = score + '%';
+            
+            const verifiedCount = state.certificates.filter(c => c.status === 'verified').length;
+            document.getElementById('visibility-caption').textContent = 'Подтверждено грамот: ' + verifiedCount;
+
+            switchStudentTab(state.currentStudentTab, false);
+            renderCertificates();
+            renderActivities();
+            renderOffers();
+        }
+
+        function renderCertificates() {
+            const container = document.getElementById('certificates-container');
+            if (!state.certificates.length) {
+                container.innerHTML = `
+                    <div class="col-span-2 glass-card rounded-2xl p-10 text-center border-dashed border-2 border-zinc-200">
+                        <i class="fas fa-award text-4xl mb-2 opacity-30"></i>
+                        <p class="text-zinc-400 text-sm font-medium">Грамот пока нет.</p>
+                        <p class="text-xs text-zinc-400 mt-1">Загрузите фото — сервер проверит бланк, а не просто поставит галочку.</p>
+                    </div>`;
+                return;
+            }
+            container.innerHTML = state.certificates.map(cert => {
+                const verified = cert.status === 'verified';
+                const rejected = cert.status === 'rejected';
+                const badge = verified
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : rejected ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-700 border-amber-200';
+                const checks = (cert.checks || []).map(check =>
+                    `<li class="text-[11px] ${check.ok ? 'text-emerald-700' : 'text-red-600'}">${check.ok ? '✓' : '✕'} ${esc(check.name)}: ${esc(check.detail)}</li>`
+                ).join('');
+                return `
+                    <div class="glass-card rounded-2xl p-5 flex flex-col card-enter border-l-4 ${verified ? 'border-l-emerald-500' : rejected ? 'border-l-red-400' : 'border-l-amber-400'}">
+                        <div class="flex justify-between items-start mb-3 gap-2">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">${esc(cert.org)}</span>
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold border ${badge}">${esc(CERT_LABEL[cert.status] || cert.status)}</span>
+                        </div>
+                        <h3 class="text-sm font-bold text-zinc-900 mb-3">${esc(cert.title)}</h3>
+                        ${cert.image
+                            ? `<div class="mb-3 rounded-lg overflow-hidden border border-zinc-200 bg-zinc-50 img-hover"><img src="${esc(cert.image)}" class="w-full h-36 object-contain bg-white" alt="Грамота"></div>`
+                            : `<div class="mb-3 h-24 bg-zinc-50 rounded-lg border border-dashed border-zinc-200 flex items-center justify-center text-zinc-300"><i class="fas fa-image text-2xl"></i></div>`}
+                        ${cert.reason ? `<p class="text-xs text-zinc-600 mb-2">${esc(cert.reason)}</p>` : ''}
+                        ${checks ? `<ul class="space-y-1 mb-3">${checks}</ul>` : ''}
+                        <div class="flex items-center justify-between mt-auto pt-3 border-t border-zinc-100">
+                            <span class="text-[10px] text-zinc-500"><i class="far fa-calendar-alt mr-1"></i>${esc(cert.date)}</span>
+                            ${verified
+                                ? `<span class="text-[10px] font-bold text-emerald-600"><i class="fas fa-arrow-up mr-1"></i>+${cert.scoreBoost} к индексу</span>`
+                                : `<button onclick="verifyCertificate('${cert.id}')" class="text-[10px] font-bold text-purple-600 hover:underline">Проверить фото снова</button>`}
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        async function submitCertificate() {
+            const title = document.getElementById('cert-title').value.trim();
+            const org = document.getElementById('cert-org').value.trim();
+            const rawDate = document.getElementById('cert-date').value;
+            const file = document.getElementById('cert-photo').files[0];
+            const date = rawDate ? rawDate.split('-').reverse().join('.') : new Date().toLocaleDateString('ru-RU');
+            if (!title || !org) { showToast('Заполните название и организатора', 'error'); return; }
+            if (!file) { showToast('Нужно фото грамоты — без него проверять нечего', 'error'); return; }
+            try {
+                const form = new FormData();
+                form.append('cert-title', title);
+                form.append('cert-org', org);
+                form.append('cert-date', date);
+                form.append('cert-photo', file);
+                const result = normCert(await api('/api/certificates', { method: 'POST', body: form }));
+                const fresh = await api('/api/profile');
+                state.profile = normProfile(fresh);
+                state.certificates.unshift(result);
+                closeCertModal();
+                state.currentStudentTab = 'verification';
+                renderAll();
+                showToast(result.reason || (result.status === 'verified' ? 'Грамота подтверждена' : 'Грамота не прошла проверку'), result.status === 'verified' ? 'success' : 'error');
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+
+        function handleImagePreview() {
+            const input = document.getElementById('cert-photo');
+            const preview = document.getElementById('image-preview');
+            const file = input.files && input.files[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) {
+                input.value = '';
+                showToast('Файл больше 5 МБ', 'error');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = event => {
+                preview.src = event.target.result;
+                preview.classList.remove('hidden');
+                document.getElementById('dropzone-content').classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function openFilePicker(event) {
+            if (event.target.id !== 'cert-photo') document.getElementById('cert-photo').click();
+        }
+
+        async function verifyCertificate(certId) {
+            const cert = state.certificates.find(item => String(item.id) === String(certId));
+            if (!cert) return;
+            try {
+                const result = normCert(await api('/api/certificates/' + cert.id + '/verify', { method: 'POST' }));
+                Object.assign(cert, result);
+                const fresh = await api('/api/profile');
+                state.profile = normProfile(fresh);
+                renderAll();
+                showToast(result.reason || 'Проверка завершена', result.status === 'verified' ? 'success' : 'error');
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+
+        function safeUrl(url) { return /^https?:\/\//i.test(url || '') ? url : null; }
+
+        function renderActivities() {
+            const container = document.getElementById('activities-container');
+            if (state.activitiesLoading) {
+                container.innerHTML = `<div class="col-span-2 glass-card rounded-2xl p-10 text-center text-sm text-zinc-500 animate-pulse"><i class="fas fa-spinner fa-spin mr-2"></i>И мероприятия...</div>`;
+                return;
+            }
+            if (!state.activities.length) {
+                container.innerHTML = `<div class="col-span-2 glass-card rounded-2xl p-10 text-center border-dashed border-2 border-zinc-200 text-sm text-zinc-500">Для вашего города и направления мероприятий пока нет.</div>`;
+                return;
+            }
+            container.innerHTML = state.activities.map(activity => {
+                const link = safeUrl(activity.link);
+                let action = '';
+                if (activity.id !== null && activity.joined) {
+                    action = `<span class="inline-flex justify-center w-full text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-200"><i class="fas fa-check-circle mr-2"></i>Заявка отправлена</span>`;
+                } else if (activity.id !== null) {
+                    action = `<button onclick="joinActivity('${activity.id}')" class="w-full py-2 rounded-lg bg-zinc-950 text-white text-xs font-bold hover:bg-zinc-800 transition"><i class="fas fa-paper-plane mr-2"></i>Участвовать</button>`;
+                } else if (link) {
+                    action = `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer" class="block text-center w-full py-2 rounded-lg bg-zinc-950 text-white text-xs font-bold hover:bg-zinc-800 transition"><i class="fas fa-external-link-alt mr-2"></i>Открыть: ${esc(activity.source)}</a>`;
+                }
+                
+                let typeIcon = 'fas fa-calendar-alt';
+                if (activity.type === 'Хакатон') typeIcon = 'fas fa-laptop-code';
+                else if (activity.type === 'Олимпиада') typeIcon = 'fas fa-trophy';
+                else if (activity.type === 'Курс') typeIcon = 'fas fa-book';
+                
+                return `
+                <div class="glass-card rounded-2xl p-5 flex flex-col justify-between border-t-4 border-t-purple-400 img-hover">
+                    <div class="space-y-3">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 uppercase"><i class="${typeIcon} mr-1"></i>${esc(activity.type)}</span>
+                            <span class="text-[10px] text-zinc-500"><i class="fas fa-map-marker-alt mr-1"></i>${esc(activity.region)} • <i class="far fa-calendar-alt mr-1"></i>${esc(activity.date)}</span>
+                        </div>
+                        <h3 class="text-base font-bold text-zinc-900">${esc(activity.title)}</h3>
+                        ${activity.snippet ? `<p class="text-xs text-zinc-600">${esc(activity.snippet)}</p>` : ''}
+                        <span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200"><i class="fas fa-arrow-up mr-1"></i>${esc(activity.bonus)}</span>
+                    </div>
+                    <div class="mt-4">${action}</div>
+                </div>`;
+            }).join('');
+        }
+
+        async function joinActivity(activityId) {
+            const activity = state.activities.find(item => String(item.id) === String(activityId));
+            if (!activity || activity.joined) return;
+            try {
+                await api('/api/activities/' + activity.id + '/join', { method: 'POST' });
+                activity.joined = true;
+                renderActivities();
+                showToast('Заявка сохранена в базе', 'success');
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+
+        function renderOffers() {
+            const container = document.getElementById('offers-container');
+            if (!state.offers.length) {
+                container.innerHTML = `<div class="glass-card rounded-2xl p-10 text-center border-dashed border-2 border-zinc-200 text-sm text-zinc-500"><i class="fas fa-inbox text-4xl mb-2 opacity-30"></i><p>Офферов пока нет.</p></div>`;
+                return;
+            }
+            container.innerHTML = state.offers.map(offer => `
+                <div class="glass-card rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 border-l-4 border-l-pink-500 img-hover">
+                    <div class="space-y-2">
+                        <span class="px-2.5 py-0.5 rounded-md text-xs font-bold bg-pink-50 text-pink-700 border border-pink-200"><i class="fas fa-university mr-1"></i>${esc(offer.university)}</span>
+                        <h3 class="text-lg font-extrabold text-zinc-900">${esc(offer.title)}</h3>
+                        <p class="text-sm text-zinc-600">${esc(offer.message)}</p>
+                    </div>
+                    ${offer.accepted
+                        ? `<div class="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-bold text-center"><i class="fas fa-check-circle mr-2"></i>Принято. Контакты переданы вузу.</div>`
+                        : `<button onclick="acceptOffer('${offer.id}')" class="px-6 py-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm font-bold hover:opacity-90 transition"><i class="fas fa-handshake mr-2"></i>Принять оффер</button>`}
+                </div>`).join('');
+        }
+
+        async function acceptOffer(offerId) {
+            const offer = state.offers.find(item => String(item.id) === String(offerId));
+            if (!offer) return;
+            try {
+                await api('/api/offers/' + offer.id + '/accept', { method: 'POST' });
+                offer.accepted = true;
+                renderOffers();
+                showToast('Оффер принят', 'success');
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+
+        function applyRadarFilters() {
+            const cityFilter = document.getElementById('filter-city').value;
+            const trackFilter = document.getElementById('filter-track').value;
+            const scoreFilter = parseInt(document.getElementById('filter-score').value, 10) || 0;
+            const filtered = state.candidates.filter(candidate =>
+                (cityFilter === 'Все' || candidate.city === cityFilter) &&
+                (trackFilter === 'Все' || candidate.track === trackFilter) &&
+                candidate.score >= scoreFilter
+            );
+            document.getElementById('candidates-count').textContent = 'Найдено: ' + filtered.length;
+            const container = document.getElementById('candidates-container');
+            if (!filtered.length) {
+                container.innerHTML = `<div class="col-span-2 glass-card rounded-2xl p-10 text-center text-sm text-zinc-500">Никого не нашли. Сбросьте фильтры.</div>`;
+                return;
+            }
+            container.innerHTML = filtered.map(candidate => `
+                <div class="glass-card rounded-2xl p-6 flex flex-col justify-between border-t-4 border-t-purple-400 img-hover">
+                    <div class="space-y-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <h3 class="text-sm font-bold text-zinc-900">${esc(candidate.name)}</h3>
+                                <p class="text-[11px] text-zinc-500"><i class="fas fa-map-marker-alt mr-1"></i>${esc(candidate.city)} • ${esc(candidate.grade)}</p>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-lg font-extrabold gradient-text">${candidate.score}%</div>
+                                <div class="text-[9px] font-bold uppercase text-zinc-400">Индекс</div>
+                            </div>
+                        </div>
+                        <span class="inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-100"><i class="fas fa-code mr-1"></i>${esc(candidate.track)}</span>
+                        <p class="text-xs text-zinc-600">${esc(candidate.achievement)}</p>
+                    </div>
+                    <div class="mt-5 pt-4 border-t border-zinc-100">
+                        ${candidate.offerSent
+                            ? `<div class="py-2 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold text-center"><i class="fas fa-check-circle mr-2"></i>Оffer уже в кабинете школьника</div>`
+                            : `<button onclick="sendOffer('${candidate.id}')" class="w-full py-2.5 rounded-lg bg-zinc-950 text-white text-xs font-bold hover:bg-zinc-800 transition"><i class="fas fa-paper-plane mr-2"></i>Отправить приглашение</button>`}
+                    </div>
+                </div>`).join('');
+        }
+
+        function resetFilters() {
+            document.getElementById('filter-city').value = 'Все';
+            document.getElementById('filter-track').value = 'Все';
+            document.getElementById('filter-score').value = '0';
+            applyRadarFilters();
+        }
+
+        async function sendOffer(candidateId) {
+            const candidate = state.candidates.find(item => String(item.id) === String(candidateId));
+            if (!candidate) return;
+            try {
+                await api('/api/radar/' + candidate.id + '/offer', jsonOpts('POST', {
+                    title: 'Приглашение на грант',
+                    message: 'Приёмная комиссия ' + (state.university.name || 'вуза') + ' приглашает вас. Направление: ' + candidate.track + '.'
+                }));
+                candidate.offerSent = true;
+                applyRadarFilters();
+                showToast('Приглашение записано школьнику ' + candidate.name, 'success');
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+
+        function openEditModal() {
+            const profile = state.profile;
+            document.getElementById('reg-name').value = profile.name || '';
+            document.getElementById('reg-city').value = String(profile.city || 'Актобе').replace(/^г\.\s*/, '');
+            document.getElementById('reg-grade').value = parseInt(profile.grade, 10) || 11;
+            document.getElementById('reg-track').value = profile.track || 'IT / Python';
+            const modal = document.getElementById('register-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+        function closeEditModal() {
+            const modal = document.getElementById('register-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+        function openRegisterModal() { openEditModal(); }
+        function closeRegisterModal() { closeEditModal(); }
+
+        document.getElementById('register-form').addEventListener('submit', async event => {
+            event.preventDefault();
+            try {
+                const profile = await api('/api/profile', jsonOpts('POST', {
+                    name: document.getElementById('reg-name').value.trim(),
+                    city: document.getElementById('reg-city').value,
+                    grade: document.getElementById('reg-grade').value,
+                    track: document.getElementById('reg-track').value
+                }));
+                state.profile = normProfile(profile);
+                paintHeader();
+                state.activities = [];
+                closeEditModal();
+                renderAll();
+                if (state.currentStudentTab === 'activities') {
+                    fetchActivities(document.getElementById('activities-search-input').value.trim());
+                }
+                showToast('Профиль обновлён в базе', 'success');
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        });
+
+        function openCertModal() {
+            const modal = document.getElementById('cert-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+        function closeCertModal() {
+            const modal = document.getElementById('cert-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.getElementById('cert-form').reset();
+            const preview = document.getElementById('image-preview');
+            preview.classList.add('hidden');
+            preview.src = '';
+            document.getElementById('dropzone-content').classList.remove('hidden');
+        }
+        document.getElementById('cert-form').addEventListener('submit', event => {
+            event.preventDefault();
+            submitCertificate();
+        });
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toastId = 'toast-' + Date.now();
+            const colors = {
+                success: 'bg-white border-l-4 border-l-emerald-500',
+                info: 'bg-white border-l-4 border-l-indigo-500',
+                error: 'bg-white border-l-4 border-l-red-500'
+            };
+            const icons = { success: 'fas fa-check-circle', info: 'fas fa-info-circle', error: 'fas fa-exclamation-triangle' };
+            const toast = document.createElement('div');
+            toast.id = toastId;
+            toast.className = 'toast-enter flex items-center gap-3 px-4 py-3.5 rounded-xl shadow-2xl border border-zinc-200 max-w-sm w-full pointer-events-auto ' + (colors[type] || colors.info);
+            toast.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-sm"><i class="${icons[type] || icons.info}"></i></div>
+                <p class="flex-1 text-xs text-zinc-700">${esc(message)}</p>
+                <button onclick="removeToast('${toastId}')" class="text-zinc-400 hover:text-zinc-600"><i class="fas fa-times"></i></button>`;
+            container.appendChild(toast);
+            setTimeout(() => removeToast(toastId), 4500);
+        }
+        function removeToast(toastId) {
+            const toast = document.getElementById(toastId);
+            if (!toast) return;
+            toast.classList.add('toast-exit');
+            setTimeout(() => toast.remove(), 300);
+        }
+
+        // Поиск мероприятий: Enter или пауза в наборе 600 мс
+        let searchTimer = null;
+        const searchInput = document.getElementById('activities-search-input');
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => fetchActivities(searchInput.value.trim()), 600);
+        });
+        searchInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                clearTimeout(searchTimer);
+                fetchActivities(searchInput.value.trim());
+            }
+        });
+
+        // Expose chat submit
+        document.getElementById('chat-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            sendChatMessage();
+        });
+    </script>
+</body>
+</html>
